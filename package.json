@@ -1,0 +1,18 @@
+{
+	"name": "vsw-wiki-gen",
+	"version": "1.0.0",
+	"description": "",
+	"main": "./src/enemy-waves.ts",
+	"scripts": {
+		"build": "tsc",
+		"start": "ts-node ./src/enemy-waves.ts"
+	},
+	"keywords": [],
+	"author": "Californ1a (https://github.com/Californ1a)",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/node": "^24.3.1",
+		"ts-node": "^10.9.2",
+		"typescript": "^5.9.2"
+	}
+}

@@ -1,0 +1,229 @@
+/* eslint-disable global-require */
+const fs = require('node:fs/promises');
+
+const ENEMIES = {};
+const STAGES = {};
+
+async function loadData() {
+	// for each folder in ../Data/, load enemies and stages
+	const folders = await fs.readdir('../Data/');
+
+	for (const folder of folders) {
+		const stats = await fs.stat(`../Data/${folder}`);
+		if (!stats.isDirectory()) continue;
+
+		const enemies = require(`../Data/${folder}/Enemy.json`);
+		const stages = require(`../Data/${folder}/Stage.json`);
+
+		ENEMIES[folder] = enemies;
+		STAGES[folder] = stages;
+	}
+}
+
+async function main() {
+	await loadData();
+
+	const WIKI_TABLES = {};
+
+	for (const folder in STAGES) {
+
+		// temp skip for testing
+		//if (folder !== 'Vampire Survivors') continue;
+
+		const DLC_STAGES = STAGES[folder];
+		const DLC_ENEMIES = ENEMIES[folder];
+		if (!DLC_STAGES || !DLC_ENEMIES) continue;
+
+		for (const stageID in DLC_STAGES) {
+
+			// temp skip for testing
+			//if (stageID !== 'TOWER') continue;
+
+			const stageData = DLC_STAGES[stageID];
+			if (!stageData) continue;
+
+			WIKI_TABLES[stageID] = [];
+
+			for (let i = 0; i < stageData.length; i++) {
+				const wave = stageData[i];
+				if (!wave) continue;
+
+				const row = [];
+
+				if (i === 0) {
+					const name = wave.stageName || stageID;
+					const waveType = (wave.waveType || 'STANDARD').toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+					const header = [
+						'==Waves==',
+						`Waves in ${name} have the ${waveType} spawn type, meaning enemies appear from ${waveType === 'Standard' ? 'all four directions of the player.' : '{{unknown}}.'}`,
+						'',
+						':\'\'Note: As official sources name only a few of the enemies, unit names are mostly made up based on their internal IDs with some creative flair added and may be subject to change.\'\'',
+						'{| class="wikitable mw-collapsible sticky-header style="width:100%"',
+						`!colspan="7" style="text-align:center" | ${name} waves`,
+						'|-',
+						'!style="width:5%" | Time Elapsed',
+						'!style="width:20%" | Enemies',
+						'!style="width:5%" | Enemy minimum',
+						'!style="width:5%" | Spawn interval (seconds)',
+						'!style="width:15%" | Bosses & Treasure',
+						'!style="width:15%" | Map events',
+						'!Notes',
+						'|-',
+					];
+					row.push(...header);
+				}
+
+				const timeElapsed = wave.minute;
+				const enemyIDs = wave.enemies;
+				const enemyMinimum = wave.minimum;
+				const spawnInterval = wave.frequency;
+				const bossIDs = wave.bosses;
+				const treasure = wave.treasure;
+				const events = wave.events;
+				const arcanaHolder = wave.arcanaHolder;
+				const arcanaTreasures = wave.arcanaTreasure;
+
+				function getEnemyEntries(enemyIDs, size) {
+					if (!enemyIDs) return [];
+					if (typeof enemyIDs === 'string') enemyIDs = [enemyIDs];
+					if (!enemyIDs?.length) return [];
+					if (!DLC_ENEMIES) return [];
+
+					const enemies = enemyIDs.map((enemyID) => {
+						for (const dir in ENEMIES) {
+							const folderEnemies = ENEMIES[dir];
+							if (!folderEnemies[enemyID]?.[0]?.bName) {
+								for (const enemies in folderEnemies) {
+									if (!folderEnemies[enemies]) continue;
+									for (const enemy of folderEnemies[enemies]) {
+										if (enemy.bVariants?.includes(enemyID)) {
+											return [enemyID, enemy];
+										}
+									}
+								}
+							} else if (folderEnemies[enemyID]?.[0]) {
+								return [enemyID, folderEnemies[enemyID][0]];
+							}
+						}
+						return [enemyID, null];
+					});
+
+					const enemyEntries = enemies.map(([enemyID, enemy]) => {
+						let name = enemyID;
+						let name2 = enemyID;
+						if (enemy?.bName) {
+							name = enemy.bName;
+							name2 = enemy.bName;
+							const matched = enemyID.match(/(\d{1,2})$/gm);
+							if (matched?.[0] && matched[0] !== '1') {
+								name2 += `-${matched[0]}`;
+							}
+						}
+						size = size || 'small';
+						return `{{Sprite|${name2}|${size}|1|1|link=${name}}}`;
+					});
+
+					return enemyEntries;
+				}
+
+				const enemyEntries = getEnemyEntries(enemyIDs, 'mid');
+				const bossEntries = getEnemyEntries(bossIDs, 'medium');
+				const arcanaHolderEntries = getEnemyEntries(arcanaHolder, 'medium');
+
+				function formatTreasure(treasure) {
+					let formattedTreasure = '';
+					if (treasure) {
+						const tier3 = treasure.chances[0];
+						const tier2 = treasure.chances[1];
+						const tier1 = treasure.chances[2];
+						const can_evo = treasure.prizeTypes.includes('EVOLUTION') ? 1 : 0;
+						const is_arcana = treasure.prizeTypes.includes('EVO_ARCANA') ? 1 : 0;
+						formattedTreasure = `\n{{Treasure|level=${treasure.level}|evo=${can_evo}|tier3=${tier3}|tier2=${tier2}|tier1=${tier1}${is_arcana ? '|reward1=arcana' : ''}}}`;
+					}
+					return formattedTreasure;
+				}
+
+				const formattedTreasure = formatTreasure(treasure);
+				const formattedArcanaTreasure = formatTreasure(arcanaTreasures);
+
+				let eventEntries = '';
+				if (events) {
+					eventEntries = events.map((event) => {
+						// replace underscore with space and uppercase each word
+						if (!event.eventType) return '';
+						const name = event.eventType
+							.toLowerCase()
+							.replace(/_/g, ' ')
+							.replace(/\b\w/g, (c) => c.toUpperCase());
+						const chance = event.chance || 0;
+						const repeat = event.repeat || 0;
+						const delay = event.delay || 0;
+						return `{{Map event|name=${name}|enemy=|variant=|chance=${chance}|repeat=${repeat}|delay=${delay}}}`;
+					}).filter((event) => event !== '').join('<br>');
+				}
+
+				let enemyEntry = '| {{NA}}';
+				if (enemyEntries.length > 0) {
+					enemyEntry = `|style="text-align:center" | ${enemyEntries.join('<br>')}`;
+				}
+
+				let bossEntry = '';
+				if (bossEntries.length > 0) {
+					bossEntry = `|style="text-align:center" | ${bossEntries.join('<br>')}`;
+					if (formattedTreasure !== '') {
+						bossEntry += `${formattedTreasure}`;
+					}
+				}
+				if (arcanaHolderEntries.length > 0) {
+					if (bossEntry === '') {
+						bossEntry = `|style="text-align:center" | ${arcanaHolderEntries.join('<br>')}`;
+					} else {
+						bossEntry += `<br>${arcanaHolderEntries.join('<br>')}`;
+					}
+					if (formattedTreasure !== '') {
+						bossEntry += `${formattedArcanaTreasure}`;
+					}
+				}
+				if (bossEntry === '') {
+					bossEntry = '| {{NA}}';
+				}
+
+				function formatMinDigits(num, minDigits = 2) {
+					let str = num.toString();
+
+					const [intPart] = str.split(".");
+
+					if (intPart.length < minDigits && !str.includes(".")) {
+						str += ".0";
+					}
+					return str;
+				}
+
+				const spawnIntervalStr = formatMinDigits(spawnInterval / 1000);
+
+				row.push(
+					`| ${timeElapsed}:00`,
+					enemyEntry,
+					`| ${enemyMinimum}`,
+					`| ${spawnIntervalStr}`,
+					bossEntry,
+					`| ${(eventEntries !== '') ? eventEntries : '{{NA}}'}`,
+					'| {{NA}}',
+				);
+
+				WIKI_TABLES[stageID][i] = row.join('\n');
+			}
+
+			const table = WIKI_TABLES[stageID].join('\n|-\n') + '\n|}';
+			try {
+				await fs.mkdir(`./out/${folder}`, { recursive: true });
+				await fs.writeFile(`./out/${folder}/${stageID}.txt`, table, 'utf-8');
+				console.log(`Wrote './out/${folder}/${stageID}.txt'`);
+			} catch (err) {
+				console.error(err);
+			}
+		}
+	}
+}
+
+main();
