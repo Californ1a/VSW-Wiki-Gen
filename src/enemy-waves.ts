@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import YAML from 'yaml';
 import type { EnemyData, Enemy } from './types/Enemy';
 import { type StageData, type Stage, type Treasure, PrizeType } from "./types/Stage";
-import type { Lang, Term } from "./types/Lang";
+import type { Lang } from "./types/Lang";
 
 type Dictionary<T> = { [key: string]: T }
 
@@ -110,7 +110,7 @@ async function main() {
 					}
 					const header = [
 						'==Waves==',
-						`Waves in ${name} have the ${waveType} spawn type, meaning enemies appear from ${waveDirection}.`,
+						`Waves in ${name} have the '''${waveType}''' spawn type, meaning enemies appear from ${waveDirection}.`,
 						'',
 						':\'\'Note: As official sources name only a few of the enemies, unit names are mostly made up based on their internal IDs with some creative flair added and may be subject to change.\'\'',
 						'{| class="wikitable mw-collapsible sticky-header style="width:100%"',
@@ -205,20 +205,18 @@ async function main() {
 					if (!enemyIDs?.length) return [];
 					if (!DLC_ENEMIES) return [];
 
-					const enemies = enemyIDs.map((enemyID) => {
+					const enemies: [enemyID: string, name: string | null][] = enemyIDs.map((enemyID) => {
 						const name = findEnemyName(enemyID);
 						return [enemyID, name];
 					})
 
 					const enemyEntries = enemies.map(([enemyID, name]) => {
-						let name2 = enemyID;
-						if (typeof name === 'string') {
-							name2 = name;
-							if (typeof enemyID === 'string') {
-								const matched = enemyID.match(/(\d{1,2})$/gm);
-								if (matched?.[0] && matched[0] !== '1') {
-									name2 += `-${matched[0]}`;
-								}
+						name = name || enemyID;
+						let name2 = name;
+						if (typeof enemyID === 'string') {
+							const matched = enemyID.match(/(\d{1,2})$/gm);
+							if (matched?.[0] && matched[0] !== '1') {
+								name2 += `-${matched[0]}`;
 							}
 						}
 						size = size || 'small';
