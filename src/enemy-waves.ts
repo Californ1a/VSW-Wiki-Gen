@@ -319,9 +319,13 @@ async function main() {
 				WIKI_TABLES[stageID][i] = row.join('\n');
 			}
 
-			const table = WIKI_TABLES[stageID].join('\n|-\n') + '\n|}';
+			let table = WIKI_TABLES[stageID].join('\n|-\n') + '\n|}';
 			try {
 				await fs.mkdir(`${OUTPUT_PATH}${folder}`, { recursive: true });
+
+				// final overrides
+				table = table.replace('|The Reaper|', '|BOSS_XLDEATH|');
+
 				await fs.writeFile(`${OUTPUT_PATH}${folder}/${stageID}.txt`, table, 'utf-8');
 				console.log(`Wrote '${OUTPUT_PATH}${folder}/${stageID}.txt'`);
 			} catch (err) {
