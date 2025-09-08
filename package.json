@@ -6,7 +6,11 @@
 	"scripts": {
 		"build": "tsc",
 		"start": "ts-node ./src/enemy-waves.ts",
-		"update": "git submodule update --init --remote --recursive"
+		"update-init": "git submodule update --init --remote --recursive",
+		"update": "git submodule update --remote --recursive"
+	},
+	"engines": {
+		"node": ">=20.0.0"
 	},
 	"keywords": [],
 	"author": "Californ1a (https://github.com/Californ1a)",
