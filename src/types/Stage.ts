@@ -126,6 +126,8 @@ export interface WaveEvent {
 	delay?: number,
 	repeat?: number,
 	chance?: number,
+	moreX?: number,
+	moreY?: string,
 }
 
 export enum PrizeType {

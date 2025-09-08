@@ -1,16 +1,21 @@
 import fs from 'node:fs/promises';
+import YAML from 'yaml';
 import type { EnemyData, Enemy } from './types/Enemy';
 import { type StageData, type Stage, type Treasure, PrizeType } from "./types/Stage";
+import type { Lang, Term } from "./types/Lang";
 
 type Dictionary<T> = { [key: string]: T }
 
-const DATA_PATH = '../VampireSurvivorsFiles/Data/';
+const MAIN_PATH = '../VampireSurvivorsFiles/';
+const DATA_PATH = `${MAIN_PATH}Data/`;
 const OUTPUT_PATH = './out/';
 
 const ENEMIES: Dictionary<EnemyData> = {};
 const STAGES: Dictionary<StageData> = {};
+const LANG: Dictionary<string> = {};
 
 async function loadData() {
+	console.log('Loading data...');
 	// for each folder in ../Data/, load enemies and stages
 	const folders = await fs.readdir(DATA_PATH);
 
@@ -34,12 +39,32 @@ async function loadData() {
 		ENEMIES[folder] = enemies;
 		STAGES[folder] = stages;
 	}
+
+	console.log('Data loaded.');
+	console.log('Parsing language file...');
+
+	const langFile = await fs.readFile(`${MAIN_PATH}Translations/I2Languages.yaml`, "utf8");
+	const lang: Lang = YAML.parse(langFile, { logLevel: 'error' });
+
+	console.log('Language file parsed.');
+
+	const langData: Dictionary<string> = lang.MonoBehaviour.mSource.mTerms
+		.reduce((acc, e) => {
+			// enemiesLang/{NAME_ID}bName
+			const matched = e.Term.match(/enemiesLang\/\{(.*)\}bName/);
+			if (!matched) return acc;
+			const key = matched[1];
+			return { ...acc, [key]: e.Languages[0] };
+		}, {});
+
+	Object.assign(LANG, langData);
 }
 
 async function main() {
 	await loadData();
 
 	const WIKI_TABLES: Dictionary<string[]> = {};
+	const ENEMY_LOOKUP: Dictionary<string> = {};
 
 	for (const folder in STAGES) {
 
@@ -68,10 +93,24 @@ async function main() {
 
 				if (i === 0) {
 					const name = (wave as Stage).stageName || stageID;
-					const waveType = ((wave as Stage).spawnType || 'STANDARD').toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+					const waveType = ((wave as Stage).spawnType || 'STANDARD')
+						.toLowerCase()
+						.replace(/_/g, ' ')
+						.replace(/\b\w/g, (c) => c.toUpperCase());
+					let waveDirection = '{{unknown}}';
+					switch (waveType) {
+						case 'Standard':
+							waveDirection = 'all four directions of the player';
+							break;
+						case 'Horizontal':
+							waveDirection = 'the left and right sides of the player';
+							break;
+						default:
+							break;
+					}
 					const header = [
 						'==Waves==',
-						`Waves in ${name} have the ${waveType} spawn type, meaning enemies appear from ${waveType === 'Standard' ? 'all four directions of the player.' : '{{unknown}}.'}`,
+						`Waves in ${name} have the ${waveType} spawn type, meaning enemies appear from ${waveDirection}.`,
 						'',
 						':\'\'Note: As official sources name only a few of the enemies, unit names are mostly made up based on their internal IDs with some creative flair added and may be subject to change.\'\'',
 						'{| class="wikitable mw-collapsible sticky-header style="width:100%"',
@@ -99,37 +138,82 @@ async function main() {
 				const arcanaHolder = wave.arcanaHolder;
 				const arcanaTreasures = wave.arcanaTreasure;
 
+				function findEnemyName(ID: string): string | null {
+					if (ENEMY_LOOKUP[ID]) return ENEMY_LOOKUP[ID];
+
+					let thisEnemy: Enemy | null = null;
+					const candidateIDs = [ID];
+					const candidateFrames: string[] = [];
+
+					// find current ID
+					for (const dir in ENEMIES) {
+						const folderEnemies = ENEMIES[dir];
+						if (folderEnemies[ID]) {
+							thisEnemy = folderEnemies[ID][0];
+							if (thisEnemy.bName) {
+								ENEMY_LOOKUP[ID] = thisEnemy.bName;
+								return thisEnemy.bName;
+							}
+							candidateFrames.push(...thisEnemy.frameNames);
+							if (thisEnemy.bVariants) {
+								candidateIDs.push(...thisEnemy.bVariants);
+							}
+							break;
+						}
+					}
+
+					// search enemy file for variants &
+					// build candidate IDs list for lang file search
+					for (const dir in ENEMIES) {
+						const folderEnemies = ENEMIES[dir];
+						for (const folderEnemyID in folderEnemies) {
+							const enemyData = folderEnemies[folderEnemyID];
+							if (!enemyData) continue;
+							for (const enemy of enemyData) {
+								if (enemy.bVariants?.includes(ID) && !candidateIDs.includes(folderEnemyID)) {
+									candidateIDs.push(folderEnemyID);
+								}
+								if (enemy.bVariants?.includes(ID) && enemy.bName) {
+									ENEMY_LOOKUP[folderEnemyID] = enemy.bName;
+									return enemy.bName;
+								}
+								const matchingFrames = enemy.frameNames.filter((frame) => candidateFrames.includes(frame));
+								if (matchingFrames.length && enemy.bName) {
+									return enemy.bName;
+								} else if (matchingFrames.length && !candidateIDs.includes(folderEnemyID)) {
+									candidateIDs.push(folderEnemyID);
+								}
+							}
+						}
+					}
+
+					// search lang file for name
+					for (const ID of candidateIDs) {
+						const langName = LANG[ID];
+						if (langName) {
+							ENEMY_LOOKUP[ID] = langName;
+							return langName;
+						}
+					}
+
+					return null;
+				}
+
 				function getEnemyEntries(enemyIDs: string[] | string |undefined, size: string | undefined): string[] {
 					if (!enemyIDs) return [];
 					if (typeof enemyIDs === 'string') enemyIDs = [enemyIDs];
 					if (!enemyIDs?.length) return [];
 					if (!DLC_ENEMIES) return [];
 
-					const enemies: [enemyID: string, enemy: Enemy | null][] = enemyIDs.map((enemyID) => {
-						for (const dir in ENEMIES) {
-							const folderEnemies = ENEMIES[dir];
-							if (!folderEnemies[enemyID]?.[0]?.bName) {
-								for (const enemies in folderEnemies) {
-									if (!folderEnemies[enemies]) continue;
-									for (const enemy of folderEnemies[enemies]) {
-										if (enemy.bVariants?.includes(enemyID)) {
-											return [enemyID, enemy];
-										}
-									}
-								}
-							} else if (folderEnemies[enemyID]?.[0]) {
-								return [enemyID, folderEnemies[enemyID][0]];
-							}
-						}
-						return [enemyID, null];
-					});
+					const enemies = enemyIDs.map((enemyID) => {
+						const name = findEnemyName(enemyID);
+						return [enemyID, name];
+					})
 
-					const enemyEntries = enemies.map(([enemyID, enemy]) => {
-						let name = enemyID;
+					const enemyEntries = enemies.map(([enemyID, name]) => {
 						let name2 = enemyID;
-						if (typeof enemy === 'object' && enemy?.bName) {
-							name = enemy.bName;
-							name2 = enemy.bName;
+						if (typeof name === 'string') {
+							name2 = name;
 							if (typeof enemyID === 'string') {
 								const matched = enemyID.match(/(\d{1,2})$/gm);
 								if (matched?.[0] && matched[0] !== '1') {
@@ -166,11 +250,15 @@ async function main() {
 				const formattedArcanaTreasure = formatTreasure(arcanaTreasures);
 
 				let eventEntries = '';
-				if (events) {
+				if (typeof events === 'object' && events?.length) {
 					eventEntries = events.map((event) => {
-						// replace underscore with space and uppercase each word
 						if (!event.eventType) return '';
-						const name = event.eventType
+						if (event.eventType === 'CYCLE_COMPLETE') return '';
+						
+						const eventName = (event.eventType === 'GENERIC_SWARM' && event.moreY) ? event.moreY : event.eventType;
+
+						// replace underscore with space and uppercase each word
+						const name = eventName
 							.toLowerCase()
 							.replace(/_/g, ' ')
 							.replace(/\b\w/g, (c) => c.toUpperCase());
