@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import YAML from 'yaml';
 import type { EnemyData, Enemy } from './types/Enemy';
-import { type StageData, type Stage, type Treasure, PrizeType } from "./types/Stage";
+import { type StageData, type Stage, type Treasure, PrizeType, SpawnType } from "./types/Stage";
 import type { Lang } from "./types/Lang";
 
 type Dictionary<T> = { [key: string]: T }
@@ -92,25 +92,30 @@ async function main() {
 				const row = [];
 
 				if (i === 0) {
-					const name = (wave as Stage).stageName || stageID;
-					const waveType = ((wave as Stage).spawnType || 'STANDARD')
-						.toLowerCase()
-						.replace(/_/g, ' ')
-						.replace(/\b\w/g, (c) => c.toUpperCase());
+					const stageWave = wave as Stage;
+					const name = stageWave.stageName || stageID;
+					const waveType = (stageWave.spawnType) ? stageWave.spawnType : SpawnType.Standard;
+
 					let waveDirection = '{{unknown}}';
 					switch (waveType) {
-						case 'Standard':
+						case SpawnType.Standard:
 							waveDirection = 'all four directions of the player';
 							break;
-						case 'Horizontal':
+						case SpawnType.Horizontal:
 							waveDirection = 'the left and right sides of the player';
 							break;
 						default:
 							break;
 					}
+
+					const waveTypeStr = waveType
+						.toLowerCase()
+						.replace(/_/g, ' ')
+						.replace(/\b\w/g, (c) => c.toUpperCase());
+
 					const header = [
 						'==Waves==',
-						`Waves in ${name} have the '''${waveType}''' spawn type, meaning enemies appear from ${waveDirection}.`,
+						`Waves in ${name} have the '''${waveTypeStr}''' spawn type, meaning enemies appear from ${waveDirection}.`,
 						'',
 						':\'\'Note: As official sources name only a few of the enemies, unit names are mostly made up based on their internal IDs with some creative flair added and may be subject to change.\'\'',
 						'{| class="wikitable mw-collapsible sticky-header style="width:100%"',
@@ -211,16 +216,18 @@ async function main() {
 					})
 
 					const enemyEntries = enemies.map(([enemyID, name]) => {
-						name = name || enemyID;
-						let name2 = name;
+						let link = name || enemyID;
+						let sprite = link;
 						if (typeof enemyID === 'string') {
 							const matched = enemyID.match(/(\d{1,2})$/gm);
 							if (matched?.[0] && matched[0] !== '1') {
-								name2 += `-${matched[0]}`;
+								sprite += `-${matched[0]}`;
 							}
 						}
 						size = size || 'small';
-						return `{{Sprite|${name2}|${size}|1|1|link=${name}}}`;
+						link = link.replace(/_/g, ' ');
+						sprite = sprite.replace(/_/g, ' ');
+						return `{{Sprite|${sprite}|${size}|1|1|link=${link}}}`;
 					});
 
 					return enemyEntries;

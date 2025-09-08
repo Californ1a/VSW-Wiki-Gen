@@ -98,9 +98,9 @@ export interface Stage extends StageWave {
 		bgm?: string[],
 		videos?: string[],
 	},
-	spawnType?: string,
+	spawnType?: SpawnType,
 	startingSpawns: number,
-	destructibleType: string,
+	destructibleType: DestructibleType,
 	destructibleFreq: number,
 	destructibleChance: number,
 	destructibleChanceMax: number,
@@ -135,4 +135,19 @@ export enum PrizeType {
 	Evolution = "EVOLUTION",
 	ExistingAny = "EXISTING_ANY",
 	ExistingWeapon = "EXISTING_WEAPON",
+}
+
+export enum DestructibleType {
+	Brazier = "BRAZIER",
+	Candelabra = "CANDELABRA",
+	Lampost = "LAMPOST",
+	Brazier2 = "BRAZIER2",
+}
+
+export enum SpawnType {
+	Standard = "STANDARD",
+	Vertical = "VERTICAL",
+	Horizontal = "HORIZONTAL",
+	Tiled = "TILED",
+	Mapped = "MAPPED",
 }
