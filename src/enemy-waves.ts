@@ -78,7 +78,7 @@ async function main() {
 		for (const stageID in DLC_STAGES) {
 
 			// temp skip for testing
-			if (stageID !== 'TP_CASTLE') continue;
+			//if (stageID !== 'TP_CASTLE') continue;
 
 			const stageData = DLC_STAGES[stageID];
 			if (!stageData) continue;
