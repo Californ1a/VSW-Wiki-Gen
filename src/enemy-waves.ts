@@ -78,12 +78,26 @@ async function main() {
 		for (const stageID in DLC_STAGES) {
 
 			// temp skip for testing
-			//if (stageID !== 'TOWER') continue;
+			if (stageID !== 'TP_CASTLE') continue;
 
 			const stageData = DLC_STAGES[stageID];
 			if (!stageData) continue;
 
 			WIKI_TABLES[stageID] = [];
+
+			let has_biomes = false;
+			const tableHeaders = [];
+			const biomeList: string[] = ['Default'];
+			for (const wave of stageData) {
+				if (wave.biome) {
+					has_biomes = true;
+					if (!biomeList.includes(wave.biome)) {
+						biomeList.push(wave.biome);
+					}
+				}
+			}
+
+			const biomeRows: {[key: string]: Array<Array<string>>} = {};
 
 			for (let i = 0; i < stageData.length; i++) {
 				const wave = stageData[i];
@@ -104,6 +118,9 @@ async function main() {
 						case SpawnType.Horizontal:
 							waveDirection = 'the left and right sides of the player';
 							break;
+						case SpawnType.Vertical:
+							waveDirection = 'the top and bottom of the player';
+							break;
 						default:
 							break;
 					}
@@ -113,12 +130,8 @@ async function main() {
 						.replace(/_/g, ' ')
 						.replace(/\b\w/g, (c) => c.toUpperCase());
 
-					const header = [
-						'==Waves==',
-						`Waves in ${name} have the '''${waveTypeStr}''' spawn type, meaning enemies appear from ${waveDirection}.`,
-						'',
-						':\'\'Note: As official sources name only a few of the enemies, unit names are mostly made up based on their internal IDs with some creative flair added and may be subject to change.\'\'',
-						'{| class="wikitable mw-collapsible sticky-header style="width:100%"',
+					tableHeaders.push(
+						`{| class="wikitable mw-collapsible sticky-header ${has_biomes ? 'mw-collapsed' : ''}" style="width:100%"`,
 						`!colspan="7" style="text-align:center" | ${name} waves`,
 						'|-',
 						'!style="width:5%" | Time Elapsed',
@@ -128,9 +141,37 @@ async function main() {
 						'!style="width:15%" | Bosses & Treasure',
 						'!style="width:15%" | Map events',
 						'!Notes',
-						'|-',
+						'|-'
+					);
+
+					const header = [
+						'==Waves==',
+						`Waves in ${name} have the '''${waveTypeStr}''' spawn type, meaning enemies appear from ${waveDirection}.`,
+						'',
+						':\'\'Note: As official sources name only a few of the enemies, unit names are mostly made up based on their internal IDs with some creative flair added and may be subject to change.\'\'',
+						...tableHeaders
 					];
 					row.push(...header);
+
+					if (has_biomes) {
+						if (!biomeRows['Default']) {
+							biomeRows['Default'] = [[]];
+							// biomeRows['Default'][0].push(...row);
+						}
+						for (const biome of biomeList) {
+							if (biome === 'Default') continue;
+							if (!biomeRows[biome]) {
+								biomeRows[biome] = [[]];
+							}
+
+							const subheader = [
+								`===${biome}===`,
+								`Waves in ${name} that spawn in the ${biome} biome.`,
+								...tableHeaders
+							]
+							biomeRows[biome][0].push(subheader.join('\n'));
+						}
+					}
 				}
 
 				const timeElapsed = wave.minute;
@@ -225,8 +266,8 @@ async function main() {
 							}
 						}
 						size = size || 'small';
-						link = link.replace(/_/g, ' ');
-						sprite = sprite.replace(/_/g, ' ');
+						link = link.replace(/_/g, ' ').trim();
+						sprite = sprite.replace(/_/g, ' ').trim();
 						return `{{Sprite|${sprite}|${size}|1|1|link=${link}}}`;
 					});
 
@@ -323,15 +364,41 @@ async function main() {
 					'| {{NA}}',
 				);
 
-				WIKI_TABLES[stageID][i] = row.join('\n');
+				//WIKI_TABLES[stageID][i] = row.join('\n');
+				const rowStr = row.join('\n');
+				//console.log(rowStr);
+				if (has_biomes) {
+					const currentBiome = wave.biome || 'Default';
+					if (!biomeRows[currentBiome]) {
+						biomeRows[currentBiome] = [];
+					}
+					if (!biomeRows[currentBiome][i]) {
+						biomeRows[currentBiome][i] = [];
+					}
+					biomeRows[currentBiome][i].push(rowStr);
+				} else {
+					WIKI_TABLES[stageID][i] = rowStr;
+				}
 			}
 
-			let table = WIKI_TABLES[stageID].join('\n|-\n') + '\n|}';
+console.log(biomeRows['Forest']);
+
+			let table: string = '';
+			if (has_biomes) {
+				for (const biomeName in biomeRows) {
+					let biomeTable = biomeRows[biomeName].filter((e) => e).join('\n|-\n') + '\n|}';
+
+					table += biomeTable + '\n\n';
+				}
+			} else {
+				table = WIKI_TABLES[stageID].join('\n|-\n') + '\n|}';
+			}
+
 			try {
 				await fs.mkdir(`${OUTPUT_PATH}${folder}`, { recursive: true });
 
 				// final overrides
-				table = table.replace('|The Reaper|', '|BOSS_XLDEATH|');
+				table = table.replace('|The Reaper|', '|BOSS_XLDEATH|').trim();
 
 				await fs.writeFile(`${OUTPUT_PATH}${folder}/${stageID}.txt`, table, 'utf-8');
 				console.log(`Wrote '${OUTPUT_PATH}${folder}/${stageID}.txt'`);

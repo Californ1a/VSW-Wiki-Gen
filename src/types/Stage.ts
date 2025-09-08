@@ -11,7 +11,8 @@ export interface StageWave {
 	bosses?: string[],
 	treasure?: Treasure,
 	arcanaHolder?: string,
-	arcanaTreasure?: Treasure
+	arcanaTreasure?: Treasure,
+	biome?: string,
 }
 
 export interface Treasure {

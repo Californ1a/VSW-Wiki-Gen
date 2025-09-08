@@ -22,4 +22,5 @@ export interface Enemy {
 	bInclue?: boolean,
 	bHighlight?: boolean,
 	bVariants?: string[],
+	alias?: Enemy,
 }
