@@ -381,8 +381,6 @@ async function main() {
 				}
 			}
 
-console.log(biomeRows['Forest']);
-
 			let table: string = '';
 			if (has_biomes) {
 				for (const biomeName in biomeRows) {
