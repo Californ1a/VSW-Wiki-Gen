@@ -334,7 +334,7 @@ async function main() {
 					} else {
 						bossEntry += `<br>${arcanaHolderEntries.join('<br>')}`;
 					}
-					if (formattedTreasure !== '') {
+					if (formattedArcanaTreasure !== '') {
 						bossEntry += `${formattedArcanaTreasure}`;
 					}
 				}
