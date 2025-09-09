@@ -282,9 +282,9 @@ async function main() {
 					let formattedTreasure = '';
 					if (!treasure) return formattedTreasure;
 
-					const tier3 = treasure.chances[0];
-					const tier2 = treasure.chances[1];
-					const tier1 = treasure.chances[2];
+					const tier3 = treasure.chances[0] || '';
+					const tier2 = treasure.chances[1] || '';
+					const tier1 = treasure.chances[2] || '';
 					const can_evo = treasure.prizeTypes.includes(PrizeType.Evolution) ? 1 : 0;
 					const is_arcana = treasure.prizeTypes.includes(PrizeType.EvoArcana) ? 1 : 0;
 					formattedTreasure = `\n{{Treasure|level=${treasure.level}|evo=${can_evo}|tier3=${tier3}|tier2=${tier2}|tier1=${tier1}${is_arcana ? '|reward1=arcana' : ''}}}`;
@@ -301,7 +301,8 @@ async function main() {
 						if (!event.eventType) return '';
 						if (event.eventType === 'CYCLE_COMPLETE') return '';
 						
-						const eventName = (event.eventType === 'GENERIC_SWARM' && event.moreY) ? event.moreY : event.eventType;
+						const genericEvents = ['GENERIC_SWARM', 'GENERIC_CIRCLE'];
+						const eventName = (genericEvents.includes(event.eventType) && event.moreY) ? event.moreY : event.eventType;
 
 						// replace underscore with space and uppercase each word
 						const name = eventName
