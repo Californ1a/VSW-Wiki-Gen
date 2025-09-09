@@ -245,7 +245,7 @@ async function main() {
 					return null;
 				}
 
-				function getEnemyEntries(enemyIDs: string[] | string |undefined, size: string | undefined): string[] {
+				function getEnemyEntries(enemyIDs: string[] | string | undefined, size: string | undefined): string[] {
 					if (!enemyIDs) return [];
 					if (typeof enemyIDs === 'string') enemyIDs = [enemyIDs];
 					if (!enemyIDs?.length) return [];
