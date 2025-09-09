@@ -1,17 +1,17 @@
 import fs from 'node:fs/promises';
 import type { EnemyData, Enemy } from './types/Enemy';
 import { type StageData, type Stage, type Treasure, PrizeType, SpawnType } from "./types/Stage";
-import type { Lang } from "./types/Lang";
+import type { EnemyLangDictionary } from "./types/Lang";
 
 type Dictionary<T> = { [key: string]: T }
 
-const MAIN_PATH = '../VampireSurvivorsFiles/';
+const MAIN_PATH = './VampireSurvivorsFiles/';
 const DATA_PATH = `${MAIN_PATH}Data/`;
 const OUTPUT_PATH = './out/';
 
 const ENEMIES: Dictionary<EnemyData> = {};
 const STAGES: Dictionary<StageData> = {};
-const LANG: Dictionary<string> = {};
+const LANG: EnemyLangDictionary = {};
 
 async function loadData() {
 	console.log('Loading data...');
@@ -39,20 +39,11 @@ async function loadData() {
 		STAGES[folder] = stages;
 	}
 
-	const lang = await readJsonFile<Lang>(`${MAIN_PATH}Translations/Generated/I2Languages.json`);
+	const enemiesLang = await readJsonFile<EnemyLangDictionary>(`${MAIN_PATH}Translations/Generated/Split/LangDictionary/enemiesLang.json`);
 
 	console.log('Data loaded.');
 
-	const langData: Dictionary<string> = lang.MonoBehaviour.mSource.mTerms
-		.reduce((acc, e) => {
-			// enemiesLang/{NAME_ID}bName
-			const matched = e.Term.match(/enemiesLang\/\{(.*)\}bName/);
-			if (!matched) return acc;
-			const key = matched[1];
-			return { ...acc, [key]: e.Languages[0] };
-		}, {});
-
-	Object.assign(LANG, langData);
+	Object.assign(LANG, enemiesLang);
 }
 
 async function main() {
@@ -231,9 +222,9 @@ async function main() {
 					// search lang file for name
 					for (const ID of candidateIDs) {
 						const langName = LANG[ID];
-						if (langName) {
-							ENEMY_LOOKUP[ID] = langName;
-							return langName;
+						if (langName?.bName?.en) {
+							ENEMY_LOOKUP[ID] = langName.bName.en;
+							return langName.bName.en;
 						}
 					}
 

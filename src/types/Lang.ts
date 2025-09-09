@@ -1,5 +1,4 @@
-// lang.MonoBehaviour.mSource.mTerms
-
+// Full language file structure
 export interface Lang {
 	MonoBehaviour: {
 		m_ObjectHideFlags: number,
@@ -55,3 +54,32 @@ export interface LangCode {
 	Code: string,
 	Flags: number,
 }
+
+// New language files structure
+// Translations/Generated/Split/LangDictionary/enemiesLang.json
+export interface EnemyLangDictionary {
+	[key: string]: EnemyLangEntry,
+}
+
+export interface EnemyLangEntry {
+		bDesc: LangShortNames,
+		bName: LangShortNames,
+	}
+
+export type LangShortNames = Partial<Record<LangShortName, string>>;
+
+export type LangShortName =
+	| 'en'  // English
+	| 'fr'  // French
+	| 'it'  // Italian
+	| 'de'  // German
+	| 'es'  // Spanish
+	| 'pt-BR' // Brazilian Portuguese
+	| 'pl'  // Polish
+	| 'ru'  // Russian
+	| 'tr'  // Turkish
+	| 'zh-CN' // Simplified Chinese
+	| 'ja'  // Japanese
+	| 'ko'  // Korean
+	| 'zh-TW' // Traditional Chinese
+	| 'uk'  // Ukrainian
