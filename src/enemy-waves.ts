@@ -254,7 +254,7 @@ async function main() {
 					const enemies: [enemyID: string, name: string | null][] = enemyIDs.map((enemyID) => {
 						const name = findEnemyName(enemyID);
 						return [enemyID, name];
-					})
+					});
 
 					const enemyEntries = enemies.map(([enemyID, name]) => {
 						let link = name || enemyID;
@@ -306,6 +306,7 @@ async function main() {
 
 						// replace underscore with space and uppercase each word
 						const name = eventName
+							.replace(/^(FS|FB|TP|MS|CHAL|EME)_/, '') // remove common prefixes
 							.toLowerCase()
 							.replace(/_/g, ' ')
 							.replace(/\b\w/g, (c) => c.toUpperCase());
