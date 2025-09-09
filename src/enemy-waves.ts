@@ -1,5 +1,4 @@
 import fs from 'node:fs/promises';
-import YAML from 'yaml';
 import type { EnemyData, Enemy } from './types/Enemy';
 import { type StageData, type Stage, type Treasure, PrizeType, SpawnType } from "./types/Stage";
 import type { Lang } from "./types/Lang";
@@ -40,13 +39,9 @@ async function loadData() {
 		STAGES[folder] = stages;
 	}
 
+	const lang = await readJsonFile<Lang>(`${MAIN_PATH}Translations/Generated/I2Languages.json`);
+
 	console.log('Data loaded.');
-	console.log('Parsing language file...');
-
-	const langFile = await fs.readFile(`${MAIN_PATH}Translations/I2Languages.yaml`, "utf8");
-	const lang: Lang = YAML.parse(langFile, { logLevel: 'error' });
-
-	console.log('Language file parsed.');
 
 	const langData: Dictionary<string> = lang.MonoBehaviour.mSource.mTerms
 		.reduce((acc, e) => {
