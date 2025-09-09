@@ -262,7 +262,7 @@ async function main() {
 						if (typeof enemyID === 'string') {
 							const matched = enemyID.match(/(\d{1,2})$/gm);
 							if (matched?.[0] && matched[0] !== '1') {
-								sprite += `-${matched[0]}`;
+								sprite += `-${parseInt(matched[0], 10)}`;
 							}
 						}
 						size = size || 'small';
